@@ -1,0 +1,27 @@
+import json
+import boto3
+from decimal import Decimal
+
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('Cart')
+
+def lambda_handler(event, context):
+    try:
+        body = json.loads(event['body'])
+
+        table.update_item(
+            Key={'CartID': body['CartID']},
+            UpdateExpression='SET Quantity = :q',
+            ExpressionAttributeValues={':q': int(body['Quantity'])}
+        )
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps({'message': 'Cart updated successfully!'})
+        }
+
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }

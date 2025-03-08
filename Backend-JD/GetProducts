@@ -1,0 +1,33 @@
+import json
+import boto3
+from decimal import Decimal
+
+# Helper function to convert Decimal to float
+def convert_decimal(obj):
+    if isinstance(obj, list):
+        return [convert_decimal(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: convert_decimal(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        return float(obj)  # or int(obj) if you prefer whole numbers
+    return obj
+
+# Initialize DynamoDB
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('Products')
+
+def lambda_handler(event, context):
+    response = table.scan()  # Fetch all products from the table
+    
+    # Convert Decimal to JSON serializable types
+    products = convert_decimal(response['Items'])
+    
+    return {
+        'statusCode': 200,
+        "headers": {
+            "Access-Control-Allow-Origin": "*",  # ✅ Allow all origins
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type"
+        },
+        'body': json.dumps(products)
+    }

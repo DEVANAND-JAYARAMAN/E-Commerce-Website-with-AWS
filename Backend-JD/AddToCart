@@ -1,0 +1,31 @@
+import json
+import boto3
+import uuid
+from decimal import Decimal
+
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('Cart')  # Replace with your DynamoDB table name
+
+def lambda_handler(event, context):
+    try:
+        body = json.loads(event['body'])  # Read request body
+
+        item = {
+            'CartID': str(uuid.uuid4()),  # Unique ID for the cart item
+            'ProductID': body['ProductID'],
+            'Quantity': int(body['Quantity']),
+            'Price': Decimal(body['Price'])
+        }
+
+        table.put_item(Item=item)
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps({'message': 'Item added to cart successfully!'})
+        }
+
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }

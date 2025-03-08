@@ -1,0 +1,56 @@
+import boto3
+import json
+import uuid  
+from decimal import Decimal
+
+# Initialize DynamoDB
+dynamodb = boto3.resource("dynamodb")
+cart_table = dynamodb.Table("Cart")  
+products_table = dynamodb.Table("Products")  
+
+def decimal_default(obj):
+    if isinstance(obj, Decimal):
+        return str(obj)
+    raise TypeError
+
+def lambda_handler(event, context):
+    try:
+        body = json.loads(event["body"])
+        user_id = body["UserID"]
+        product_id = body["ProductID"]
+        quantity = int(body["Quantity"])
+
+        # Fetch product details
+        product_response = products_table.get_item(Key={"ProductID": product_id})
+        if "Item" not in product_response:
+            return {"statusCode": 404, "body": json.dumps({"message": "Product not found"})}
+
+        product = product_response["Item"]
+
+        # Generate CartID
+        cart_id = f"{user_id}-{product_id}"
+
+        # Prepare cart item
+        cart_item = {
+            "CartID": cart_id,  
+            "UserID": user_id,
+            "ProductID": product["ProductID"],
+            "Price": Decimal(str(product["Price"])),  
+            "Quantity": quantity,
+            "ImageURL": product["ImageURL"],
+            "Name": product["Name"]
+        }
+
+        # Insert item into Cart table
+        cart_table.put_item(Item=cart_item)
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"message": "Item added to cart!", "item": cart_item}, default=decimal_default)
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)})
+        }
